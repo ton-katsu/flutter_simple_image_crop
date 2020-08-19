@@ -6,31 +6,40 @@ const _kCropHandleSize = 10.0;
 
 enum _CropAction { none, moving, scaling }
 
+enum ChipShape {
+  circle,
+  square,
+}
+
 class ImgCrop extends StatefulWidget {
   final ImageProvider image;
   final double maximumScale;
   final ImageErrorListener onImageError;
-  final double chipRadius; // 裁剪半径
-  final String chipShape; // 裁剪区域形状
-  const ImgCrop(
-      {Key key,
-      this.image,
-      this.maximumScale: 2.0,
-      this.onImageError,
-      this.chipRadius = 150,
-      this.chipShape = 'circle'})
-      : assert(image != null),
+  final double chipRadius;
+  final ChipShape chipShape;
+  final double heightRatio; // width * height : 1 * heightRatio
+  const ImgCrop({
+    Key key,
+    this.image,
+    this.maximumScale: 2.0,
+    this.onImageError,
+    this.chipRadius = 150,
+    this.chipShape = ChipShape.circle,
+    this.heightRatio = 1.0,
+  })  : assert(image != null),
         assert(maximumScale != null),
         super(key: key);
 
-  ImgCrop.file(File file,
-      {Key key,
-      double scale = 1.0,
-      this.maximumScale: 2.0,
-      this.onImageError,
-      this.chipRadius = 150,
-      this.chipShape = 'circle'})
-      : image = FileImage(file, scale: scale),
+  ImgCrop.file(
+    File file, {
+    Key key,
+    double scale = 1.0,
+    this.maximumScale: 2.0,
+    this.onImageError,
+    this.chipRadius = 150,
+    this.chipShape = ChipShape.circle,
+    this.heightRatio = 1.0,
+  })  : image = FileImage(file, scale: scale),
         assert(maximumScale != null),
         super(key: key);
 
@@ -42,7 +51,8 @@ class ImgCrop extends StatefulWidget {
     this.chipRadius = 150,
     this.maximumScale: 2.0,
     this.onImageError,
-    this.chipShape = 'circle',
+    this.chipShape = ChipShape.circle,
+    this.heightRatio = 1.0,
   })  : image = AssetImage(assetName, bundle: bundle, package: package),
         assert(maximumScale != null),
         super(key: key);
@@ -193,6 +203,13 @@ class ImgCropState extends State<ImgCrop> with TickerProviderStateMixin, Drag {
         Offset(_kCropHandleSize, _kCropHandleSize);
   }
 
+  // Make sure if widget.heightRatio between 0 - 1.0
+  double get heightRatio {
+    return widget.heightRatio > 1.0
+        ? 1.0
+        : widget.heightRatio < 0.0 ? 0.0 : widget.heightRatio;
+  }
+
   void _settleAnimationChanged() {
     setState(() {
       _scale = _scaleTween.transform(_settleController
@@ -217,8 +234,8 @@ class ImgCropState extends State<ImgCrop> with TickerProviderStateMixin, Drag {
     final _areaOffsetRadio = _areaOffset / _deviceWidth;
     final width = 1.0 - _areaOffsetRadio;
 
-    final height =
-        (imageWidth * viewWidth * width) / (imageHeight * viewHeight * 1.0);
+    final height = (imageWidth * viewWidth * width) /
+        (imageHeight * viewHeight / widget.heightRatio);
     return Rect.fromLTWH((1.0 - width) / 2, (1.0 - height) / 2, width, height);
   }
 
@@ -365,7 +382,7 @@ class _CropPainter extends CustomPainter {
   final Rect area;
   final double scale;
   final double active;
-  final String chipShape;
+  final ChipShape chipShape;
 
   _CropPainter(
       {this.image,
@@ -444,7 +461,7 @@ class _CropPainter extends CustomPainter {
     final _path1 = Path()
       ..addRect(Rect.fromLTRB(0.0, 0.0, rect.width, rect.height));
     Path _path2;
-    if (chipShape == 'rect') {
+    if (chipShape == ChipShape.square) {
       _path2 = Path()..addRect(boundaries);
     } else {
       _path2 = Path()
@@ -463,7 +480,7 @@ class _CropPainter extends CustomPainter {
       ..color = Colors.white
       ..strokeWidth = 2
       ..style = PaintingStyle.stroke;
-    if (chipShape == 'rect') {
+    if (chipShape == ChipShape.square) {
       canvas.drawRect(
           Rect.fromLTRB(boundaries.left - 1, boundaries.top - 1,
               boundaries.right + 1, boundaries.bottom + 1),

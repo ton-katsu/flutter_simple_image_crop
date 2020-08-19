@@ -137,7 +137,7 @@ class _SimpleCropRouteState extends State<SimpleCropRoute> {
           child: ImgCrop(
             key: cropKey,
             // chipRadius: 100,
-            // chipShape: 'rect',
+            // chipShape: ChipShape.square,
             maximumScale: 3,
             image: FileImage(args['image']),
           ),
